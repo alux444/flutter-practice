@@ -7,6 +7,7 @@ class WeatherData {
   final double feelsLikeF;
   final String condition;
   final String iconUrl;
+  final String lastUpdated;
 
   WeatherData({
     required this.cityName,
@@ -17,6 +18,7 @@ class WeatherData {
     required this.feelsLikeF,
     required this.condition,
     required this.iconUrl,
+    required this.lastUpdated,
   });
 
   factory WeatherData.fromJson(Map<String, dynamic> json) {
@@ -29,6 +31,7 @@ class WeatherData {
       feelsLikeF: json['current']['feelslike_f'].toDouble(),
       condition: json['current']['condition']['text'],
       iconUrl: json['current']['condition']['icon'],
+      lastUpdated: json['current']['last_updated'],
     );
   }
 }
