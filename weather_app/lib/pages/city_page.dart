@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/cupertino.dart';
 import 'package:weather_app/api/weather_api_service.dart';
 import 'package:weather_app/src/location_service.dart';
 import 'package:weather_app/data/weather_data.dart';
 import 'package:weather_app/widgets/weather_condition_widget.dart';
+import 'package:weather_app/main.dart' show isIOS;
 
 class CityPage extends StatefulWidget {
   final String? cityName;
@@ -23,14 +25,12 @@ class _CityPageState extends State<CityPage> {
   @override
   void initState() {
     super.initState();
-
     if (widget.cityName != null && widget.cityName!.isNotEmpty) {
       isUsingCustomCity = true;
       currentCity = widget.cityName;
       _getWeatherForCity(widget.cityName!);
       return;
     }
-
     _getCurrentLocationAndWeather();
   }
 
@@ -84,7 +84,7 @@ class _CityPageState extends State<CityPage> {
       }
 
       setState(() {
-        errorMessage = 'Failed to fetch weather data :(';
+        errorMessage = 'Failed to fetch weather data for $city';
         isLoading = false;
       });
     } catch (e) {
@@ -109,9 +109,18 @@ class _CityPageState extends State<CityPage> {
 
   @override
   Widget build(BuildContext context) {
+    if (isIOS) {
+      return _buildCupertinoPage();
+    }
+    return _buildMaterialPage();
+  }
+
+  Widget _buildMaterialPage() {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('City Weather'),
+        title: Text(
+          isUsingCustomCity ? 'Weather for $currentCity' : 'Current Weather',
+        ),
         backgroundColor: Theme.of(context).colorScheme.inversePrimary,
         actions: [
           if (isUsingCustomCity)
@@ -123,11 +132,38 @@ class _CityPageState extends State<CityPage> {
           IconButton(
             onPressed: _refreshWeather,
             icon: const Icon(Icons.refresh),
-            tooltip: 'Refresh',
+            tooltip: 'Refresh weather',
           ),
         ],
       ),
       body: _buildBody(),
+    );
+  }
+
+  Widget _buildCupertinoPage() {
+    return CupertinoPageScaffold(
+      navigationBar: CupertinoNavigationBar(
+        middle: Text(
+          isUsingCustomCity ? 'Weather for $currentCity' : 'Current Weather',
+        ),
+        trailing: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            if (isUsingCustomCity)
+              CupertinoButton(
+                padding: EdgeInsets.zero,
+                onPressed: _switchToCurrentLocation,
+                child: const Icon(CupertinoIcons.location_solid),
+              ),
+            CupertinoButton(
+              padding: EdgeInsets.zero,
+              onPressed: _refreshWeather,
+              child: const Icon(CupertinoIcons.refresh),
+            ),
+          ],
+        ),
+      ),
+      child: SafeArea(child: _buildBody()),
     );
   }
 
@@ -137,12 +173,17 @@ class _CityPageState extends State<CityPage> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const CircularProgressIndicator(),
-            const SizedBox(height: 14),
+            isIOS
+                ? const CupertinoActivityIndicator(radius: 20)
+                : const CircularProgressIndicator(),
+            const SizedBox(height: 16),
             Text(
               isUsingCustomCity
                   ? 'Getting weather for ${widget.cityName}...'
                   : 'Getting your location and weather...',
+              style: isIOS
+                  ? CupertinoTheme.of(context).textTheme.textStyle
+                  : Theme.of(context).textTheme.bodyMedium,
             ),
           ],
         ),
@@ -152,28 +193,63 @@ class _CityPageState extends State<CityPage> {
     if (errorMessage != null) {
       return Center(
         child: Padding(
-          padding: const EdgeInsets.all(8.0),
+          padding: const EdgeInsets.all(16.0),
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              const Icon(Icons.error_outline, size: 100, color: Colors.red),
+              Icon(
+                isIOS
+                    ? CupertinoIcons.exclamationmark_triangle
+                    : Icons.error_outline,
+                size: 80,
+                color: isIOS ? CupertinoColors.systemRed : Colors.red,
+              ),
               const SizedBox(height: 20),
               Text(
-                'Oops! Something went wrong :(',
-                style: Theme.of(context).textTheme.headlineSmall,
+                'Oops! Something went wrong',
+                style: isIOS
+                    ? CupertinoTheme.of(context).textTheme.navTitleTextStyle
+                    : Theme.of(context).textTheme.headlineSmall,
                 textAlign: TextAlign.center,
               ),
               const SizedBox(height: 10),
               Text(
                 errorMessage!,
-                style: const TextStyle(color: Colors.red),
+                style: TextStyle(
+                  color: isIOS ? CupertinoColors.systemRed : Colors.red,
+                ),
                 textAlign: TextAlign.center,
               ),
               const SizedBox(height: 20),
-              ElevatedButton.icon(
-                onPressed: _getCurrentLocationAndWeather,
-                icon: const Icon(Icons.refresh),
-                label: const Text('Try Again'),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  if (isIOS)
+                    CupertinoButton.filled(
+                      onPressed: _refreshWeather,
+                      child: const Text('Try Again'),
+                    )
+                  else
+                    ElevatedButton.icon(
+                      onPressed: _refreshWeather,
+                      icon: const Icon(Icons.refresh),
+                      label: const Text('Try Again'),
+                    ),
+                  if (isUsingCustomCity) ...[
+                    const SizedBox(width: 16),
+                    if (isIOS)
+                      CupertinoButton(
+                        onPressed: _switchToCurrentLocation,
+                        child: const Text('Use Location'),
+                      )
+                    else
+                      ElevatedButton.icon(
+                        onPressed: _switchToCurrentLocation,
+                        icon: const Icon(Icons.my_location),
+                        label: const Text('Use Location'),
+                      ),
+                  ],
+                ],
               ),
             ],
           ),
@@ -184,8 +260,45 @@ class _CityPageState extends State<CityPage> {
     if (weatherData != null) {
       return SingleChildScrollView(
         child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
           children: [
+            if (isUsingCustomCity)
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(12),
+                margin: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: isIOS
+                      ? CupertinoColors.systemBlue.withOpacity(0.1)
+                      : Colors.blue[50],
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(
+                    color: isIOS
+                        ? CupertinoColors.systemBlue.withOpacity(0.3)
+                        : Colors.blue[200]!,
+                  ),
+                ),
+                child: Row(
+                  children: [
+                    Icon(
+                      isIOS ? CupertinoIcons.info : Icons.info_outline,
+                      color: isIOS
+                          ? CupertinoColors.systemBlue
+                          : Colors.blue[700],
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        'Showing weather for custom city: ${weatherData!.cityName}',
+                        style: TextStyle(
+                          color: isIOS
+                              ? CupertinoColors.systemBlue
+                              : Colors.blue[700],
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
             WeatherConditionWidget(weatherData: weatherData!),
             const SizedBox(height: 16),
           ],
@@ -193,15 +306,22 @@ class _CityPageState extends State<CityPage> {
       );
     }
 
-    return const Center(
+    return Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(Icons.cloud_off, size: 100, color: Colors.grey),
-          SizedBox(height: 20),
+          Icon(
+            isIOS ? CupertinoIcons.cloud_snow : Icons.cloud_off,
+            size: 80,
+            color: isIOS ? CupertinoColors.systemGrey : Colors.grey,
+          ),
+          const SizedBox(height: 20),
           Text(
             'No weather data available',
-            style: TextStyle(fontSize: 16, color: Colors.grey),
+            style: TextStyle(
+              fontSize: 16,
+              color: isIOS ? CupertinoColors.systemGrey : Colors.grey,
+            ),
           ),
         ],
       ),

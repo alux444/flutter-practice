@@ -8,6 +8,8 @@ class WeatherData {
   final String condition;
   final String iconUrl;
   final String lastUpdated;
+  final double humidity;
+  final double windKph;
 
   WeatherData({
     required this.cityName,
@@ -19,6 +21,8 @@ class WeatherData {
     required this.condition,
     required this.iconUrl,
     required this.lastUpdated,
+    required this.humidity,
+    required this.windKph,
   });
 
   factory WeatherData.fromJson(Map<String, dynamic> json) {
@@ -32,6 +36,8 @@ class WeatherData {
       condition: json['current']['condition']['text'],
       iconUrl: json['current']['condition']['icon'],
       lastUpdated: json['current']['last_updated'],
+      humidity: json['current']['humidity'].toDouble(),
+      windKph: json['current']['wind_kph'].toDouble(),
     );
   }
 }
