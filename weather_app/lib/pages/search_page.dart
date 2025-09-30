@@ -4,6 +4,7 @@ import 'package:weather_app/main.dart' show isIOS;
 import 'package:weather_app/api/weather_api_service.dart';
 import 'package:weather_app/data/weather_data.dart';
 import 'package:weather_app/pages/city_page.dart';
+import 'package:weather_app/src/storage_service.dart';
 
 class SearchPage extends StatefulWidget {
   const SearchPage({super.key});
@@ -18,11 +19,55 @@ class _SearchPageState extends State<SearchPage> {
   final List<String> _searchHistory = [];
   bool _isLoading = false;
   String? _errorMessage;
+  bool _isInitialized = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadSavedData();
+  }
 
   @override
   void dispose() {
     _searchController.dispose();
     super.dispose();
+  }
+
+  Future<void> _loadSavedData() async {
+    setState(() {
+      _isLoading = true;
+    });
+
+    try {
+      await StorageService.removeStaleData();
+
+      final savedResults = await StorageService.loadSearchResults();
+      final savedHistory = await StorageService.loadSearchHistory();
+
+      setState(() {
+        _searchResults.clear();
+        _searchResults.addAll(savedResults);
+        _searchHistory.clear();
+        _searchHistory.addAll(savedHistory);
+        _isLoading = false;
+        _isInitialized = true;
+      });
+    } catch (e) {
+      setState(() {
+        _errorMessage = 'Error loading saved data: $e';
+        _isLoading = false;
+        _isInitialized = true;
+      });
+    }
+  }
+
+  Future<void> _saveData() async {
+    try {
+      await StorageService.saveSearchResults(_searchResults);
+      await StorageService.saveSearchHistory(_searchHistory);
+    } catch (e) {
+      print('Error saving data: $e');
+    }
   }
 
   Future<void> _searchCity(String cityName) async {
@@ -63,6 +108,7 @@ class _SearchPageState extends State<SearchPage> {
 
           _isLoading = false;
         });
+        await _saveData();
       } else {
         setState(() {
           _errorMessage = 'City "$cityName" not found';
@@ -81,11 +127,19 @@ class _SearchPageState extends State<SearchPage> {
     _searchCity(value);
   }
 
-  void _clearResults() {
+  Future<void> _clearResults() async {
     setState(() {
       _searchResults.clear();
       _errorMessage = null;
     });
+    await _saveData();
+  }
+
+  Future<void> _clearHistory() async {
+    setState(() {
+      _searchHistory.clear();
+    });
+    await _saveData();
   }
 
   void _navigateToCityPage(WeatherData weatherData) {
@@ -101,8 +155,78 @@ class _SearchPageState extends State<SearchPage> {
     );
   }
 
+  Future<void> _refreshWeatherData(int index) async {
+    final weatherData = _searchResults[index];
+
+    setState(() {
+      _isLoading = true;
+    });
+
+    try {
+      final weatherJson = await WeatherApiService.getCurrentWeather(
+        location: weatherData.cityName,
+      );
+
+      if (weatherJson != null) {
+        final updatedWeatherData = WeatherData.fromJson(weatherJson);
+
+        setState(() {
+          _searchResults[index] = updatedWeatherData;
+          _isLoading = false;
+        });
+
+        await _saveData();
+      }
+    } catch (e) {
+      setState(() {
+        _isLoading = false;
+      });
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
+    // Show loading screen while initializing
+    if (!_isInitialized) {
+      return isIOS
+          ? CupertinoPageScaffold(
+              navigationBar: const CupertinoNavigationBar(
+                middle: Text('Search Cities'),
+              ),
+              child: SafeArea(
+                child: Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      const CupertinoActivityIndicator(radius: 20),
+                      const SizedBox(height: 16),
+                      Text(
+                        'Loading saved searches...',
+                        style: CupertinoTheme.of(context).textTheme.textStyle,
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            )
+          : Scaffold(
+              appBar: AppBar(
+                title: const Text('Search Cities'),
+                backgroundColor: Theme.of(context).colorScheme.inversePrimary,
+              ),
+              body: const Center(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    CircularProgressIndicator(),
+                    SizedBox(height: 16),
+                    Text('Loading saved searches...'),
+                  ],
+                ),
+              ),
+            );
+    }
+
     if (isIOS) {
       return _buildCupertinoPage();
     }
@@ -274,13 +398,27 @@ class _SearchPageState extends State<SearchPage> {
           // Search History
           if (_searchHistory.isNotEmpty) ...[
             const SizedBox(height: 30),
-            Text(
-              'Recent Searches',
-              style: isIOS
-                  ? CupertinoTheme.of(
-                      context,
-                    ).textTheme.textStyle.copyWith(fontWeight: FontWeight.w600)
-                  : Theme.of(context).textTheme.titleMedium,
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Text(
+                  'Recent Searches',
+                  style: isIOS
+                      ? CupertinoTheme.of(context).textTheme.textStyle.copyWith(
+                          fontWeight: FontWeight.w600,
+                        )
+                      : Theme.of(context).textTheme.titleMedium,
+                ),
+                const SizedBox(width: 8),
+                GestureDetector(
+                  onTap: _clearHistory,
+                  child: Icon(
+                    isIOS ? CupertinoIcons.clear : Icons.clear,
+                    size: 16,
+                    color: isIOS ? CupertinoColors.systemRed : Colors.red,
+                  ),
+                ),
+              ],
             ),
             const SizedBox(height: 10),
             Wrap(
@@ -323,14 +461,16 @@ class _SearchPageState extends State<SearchPage> {
           padding: const EdgeInsets.only(bottom: 16),
           child: GestureDetector(
             onTap: () => _navigateToCityPage(weatherData),
-            child: _buildWeatherCard(weatherData),
+            child: _buildWeatherCard(weatherData, index),
           ),
         );
       },
     );
   }
 
-  Widget _buildWeatherCard(WeatherData weatherData) {
+  Widget _buildWeatherCard(WeatherData weatherData, int index) {
+    final isStale = weatherData.isStale;
+
     final cardContent = Padding(
       padding: const EdgeInsets.all(16),
       child: Row(
@@ -355,14 +495,33 @@ class _SearchPageState extends State<SearchPage> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  weatherData.cityName,
-                  style: isIOS
-                      ? CupertinoTheme.of(context).textTheme.textStyle.copyWith(
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                        )
-                      : Theme.of(context).textTheme.titleLarge,
+                Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        weatherData.cityName,
+                        style: isIOS
+                            ? CupertinoTheme.of(
+                                context,
+                              ).textTheme.textStyle.copyWith(
+                                fontSize: 18,
+                                fontWeight: FontWeight.bold,
+                              )
+                            : Theme.of(context).textTheme.titleLarge,
+                      ),
+                    ),
+                    if (isStale)
+                      GestureDetector(
+                        onTap: () => _refreshWeatherData(index),
+                        child: Icon(
+                          isIOS ? CupertinoIcons.refresh : Icons.refresh,
+                          size: 16,
+                          color: isIOS
+                              ? CupertinoColors.systemOrange
+                              : Colors.orange,
+                        ),
+                      ),
+                  ],
                 ),
                 Text(
                   weatherData.country,
@@ -381,6 +540,16 @@ class _SearchPageState extends State<SearchPage> {
                         : Colors.grey[600],
                   ),
                 ),
+                if (isStale)
+                  Text(
+                    'Data may be outdated',
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: isIOS
+                          ? CupertinoColors.systemOrange
+                          : Colors.orange,
+                    ),
+                  ),
               ],
             ),
           ),
@@ -424,6 +593,9 @@ class _SearchPageState extends State<SearchPage> {
         decoration: BoxDecoration(
           color: CupertinoColors.systemBackground,
           borderRadius: BorderRadius.circular(12),
+          border: isStale
+              ? Border.all(color: CupertinoColors.systemOrange.withOpacity(0.3))
+              : null,
           boxShadow: [
             BoxShadow(
               color: CupertinoColors.systemGrey.withOpacity(0.2),
@@ -435,7 +607,11 @@ class _SearchPageState extends State<SearchPage> {
         child: cardContent,
       );
     } else {
-      return Card(elevation: 2, child: cardContent);
+      return Card(
+        elevation: 2,
+        color: isStale ? Colors.orange[50] : null,
+        child: cardContent,
+      );
     }
   }
 }
