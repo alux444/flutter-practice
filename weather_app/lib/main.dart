@@ -110,10 +110,13 @@ class _CupertinoHomePageState extends State<CupertinoHomePage> {
       tabBar: CupertinoTabBar(
         items: [
           BottomNavigationBarItem(
-            icon: Icon(Icons.location_city),
+            icon: Icon(CupertinoIcons.location),
             label: 'City',
           ),
-          BottomNavigationBarItem(icon: Icon(Icons.search), label: 'Search'),
+          BottomNavigationBarItem(
+            icon: Icon(CupertinoIcons.search),
+            label: 'Search',
+          ),
         ],
         activeColor: CupertinoColors.activeBlue,
       ),
