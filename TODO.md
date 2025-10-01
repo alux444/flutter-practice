@@ -1,9 +1,6 @@
 # 🗂️ Practice projects
 
-- [ ] Weather 
-- [ ] Unsplash photo search 
-- [ ] Registration and form, firebase auth + infinite list
+- [x] Weather
 - [ ] Notes
-- [ ] Expense tracker
+- [ ] Registration and form, firebase auth + infinite list, client + server with shared models
 - [ ] GPT wrapper
-- [ ] Client + server with shared models
