@@ -1,7 +1,7 @@
-import 'package:notes_ios/data/note_run.dart';
+import 'package:notes_ios/data/rope_node.dart';
 
 class Note {
-  List<NoteRun> runs;
+  RopeNode? root;
 
-  Note() : runs = [];
+  Note() : root = null;
 }
