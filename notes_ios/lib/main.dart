@@ -40,8 +40,8 @@ class _AppState extends State<App> {
             label: 'Notes',
           ),
           BottomNavigationBarItem(
-            icon: Icon(CupertinoIcons.search),
-            label: 'Note',
+            icon: Icon(CupertinoIcons.doc_text),
+            label: 'Editor',
           ),
         ],
         activeColor: CupertinoColors.activeBlue,
@@ -55,7 +55,7 @@ class _AppState extends State<App> {
               case 1:
                 return NotePage();
               default:
-                return NoteSelectionPage(folderTitle: 'Notes');
+                return NotePage();
             }
           },
         );
