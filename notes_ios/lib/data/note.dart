@@ -1,4 +1,5 @@
 import 'package:notes_ios/data/note_history.dart';
+import 'package:notes_ios/data/note_run.dart';
 import 'package:notes_ios/data/rope_node.dart';
 
 class Note {
@@ -21,5 +22,30 @@ class Note {
     }
     history.undo.add(root);
     root = history.redo.removeLast();
+  }
+
+  String toText() {
+    if (root == null) return '';
+    return _nodeToText(root!);
+  }
+
+  String _nodeToText(RopeNode node) {
+    if (node.run != null) {
+      return node.run!.text;
+    }
+    String leftText = node.left != null ? _nodeToText(node.left!) : '';
+    String rightText = node.right != null ? _nodeToText(node.right!) : '';
+    return leftText + rightText;
+  }
+
+  void fromText(String text) {
+    if (text.isEmpty) {
+      root = null;
+      return;
+    }
+    history.undo.add(root);
+    history.redo.clear();
+
+    root = RopeNode.leaf(NoteRun(text: text, style: {TextStyle.regular}));
   }
 }
