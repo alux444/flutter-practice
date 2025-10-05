@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/services.dart';
 import 'package:notes_ios/data/note.dart';
@@ -14,6 +16,7 @@ class NotePage extends StatefulWidget {
 class _NotePageState extends State<NotePage> {
   late TextEditingController _textController;
   late Note _note;
+  Timer? _debounceTimer;
 
   @override
   void initState() {
@@ -27,6 +30,7 @@ class _NotePageState extends State<NotePage> {
   void dispose() {
     _textController.removeListener(_onTextChanged);
     _textController.dispose();
+    _debounceTimer?.cancel();
     super.dispose();
   }
 
@@ -35,52 +39,58 @@ class _NotePageState extends State<NotePage> {
   }
 
   void _onTextChanged() {
-    _note.fromText(_textController.text);
-  }
-
-  void _saveNote() {
-    _note.fromText(_textController.text);
-    showCupertinoDialog(
-      context: context,
-      builder: (context) => CupertinoAlertDialog(
-        title: Text('Note Saved'),
-        content: Text('Your note has been saved successfully.'),
-        actions: [
-          CupertinoDialogAction(
-            child: Text('OK'),
-            onPressed: () => Navigator.of(context).pop(),
-          ),
-        ],
-      ),
-    );
+    _debounceTimer?.cancel();
+    _debounceTimer = Timer(Duration(milliseconds: 500), () {
+      setState(() {
+        _note.fromText(_textController.text);
+      });
+    });
   }
 
   void _undo() {
-    _note.undo();
-    _textController.text = _note.toText();
-    // moves cursor to end of text
-    _textController.selection = TextSelection.collapsed(
-      offset: _textController.text.length,
-    );
+    setState(() {
+      _note.undo();
+      _textController.text = _note.toText();
+      // moves cursor to end of text
+      _textController.selection = TextSelection.collapsed(
+        offset: _textController.text.length,
+      );
+    });
   }
 
   void _redo() {
-    _note.redo();
-    _textController.text = _note.toText();
-    _textController.selection = TextSelection.collapsed(
-      offset: _textController.text.length,
-    );
+    setState(() {
+      _note.redo();
+      _textController.text = _note.toText();
+      _textController.selection = TextSelection.collapsed(
+        offset: _textController.text.length,
+      );
+    });
   }
 
   @override
   Widget build(BuildContext context) {
     return CupertinoPageScaffold(
       navigationBar: CupertinoNavigationBar(
-        middle: Text('Note page'),
-        trailing: CupertinoButton(
-          padding: EdgeInsets.zero,
-          onPressed: _saveNote,
-          child: Text('Save'),
+        leading: CupertinoButton(
+          child: Icon(CupertinoIcons.back),
+          onPressed: () => Navigator.of(context).pop(),
+        ),
+        trailing: Row(
+          mainAxisAlignment: MainAxisAlignment.end,
+          children: [
+            CupertinoButton(
+              onPressed: _note.canUndo ? _undo : null,
+              disabledColor: CupertinoColors.inactiveGray,
+              child: Icon(CupertinoIcons.arrow_uturn_left),
+            ),
+            SizedBox(width: 5),
+            CupertinoButton(
+              onPressed: _note.canRedo ? _redo : null,
+              disabledColor: CupertinoColors.inactiveGray,
+              child: Icon(CupertinoIcons.arrow_uturn_right),
+            ),
+          ],
         ),
       ),
       child: SafeArea(

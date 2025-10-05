@@ -8,6 +8,14 @@ class Note {
 
   Note() : root = null, history = NoteHistory();
 
+  bool get canUndo {
+    return history.undo.isNotEmpty;
+  }
+
+  bool get canRedo {
+    return history.redo.isNotEmpty;
+  }
+
   void undo() {
     if (history.undo.isEmpty) {
       return;
@@ -39,7 +47,16 @@ class Note {
   }
 
   void fromText(String text) {
+    String currentText = toText();
+    if (currentText == text) {
+      return;
+    }
+    
     if (text.isEmpty) {
+      if (root != null) {
+        history.undo.add(root);
+        history.redo.clear();
+      }
       root = null;
       return;
     }
