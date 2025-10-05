@@ -1,4 +1,5 @@
 import 'package:flutter/cupertino.dart';
+import 'package:flutter/services.dart';
 import 'package:notes_ios/data/note.dart';
 
 class NotePage extends StatefulWidget {
@@ -19,22 +20,26 @@ class _NotePageState extends State<NotePage> {
     super.initState();
     _note = widget.note ?? Note();
     _textController = TextEditingController(text: _getNoteText());
+    _textController.addListener(_onTextChanged);
   }
 
   @override
   void dispose() {
+    _textController.removeListener(_onTextChanged);
     _textController.dispose();
     super.dispose();
   }
 
   String _getNoteText() {
-    // TODO: rope to text
-    return '';
+    return _note.toText();
+  }
+
+  void _onTextChanged() {
+    _note.fromText(_textController.text);
   }
 
   void _saveNote() {
-    // TODO: text to rope
-    // TODO: change to just autosave on run changes
+    _note.fromText(_textController.text);
     showCupertinoDialog(
       context: context,
       builder: (context) => CupertinoAlertDialog(
@@ -47,6 +52,23 @@ class _NotePageState extends State<NotePage> {
           ),
         ],
       ),
+    );
+  }
+
+  void _undo() {
+    _note.undo();
+    _textController.text = _note.toText();
+    // moves cursor to end of text
+    _textController.selection = TextSelection.collapsed(
+      offset: _textController.text.length,
+    );
+  }
+
+  void _redo() {
+    _note.redo();
+    _textController.text = _note.toText();
+    _textController.selection = TextSelection.collapsed(
+      offset: _textController.text.length,
     );
   }
 
@@ -72,7 +94,7 @@ class _NotePageState extends State<NotePage> {
                     controller: _textController,
                     placeholder: 'Start typing here...',
                     maxLines: null,
-                    expands: true,
+                    minLines: 20,
                     textAlignVertical: TextAlignVertical.top,
                     style: CupertinoTheme.of(context).textTheme.textStyle,
                     decoration: BoxDecoration(border: null),
