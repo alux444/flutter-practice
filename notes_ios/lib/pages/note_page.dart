@@ -67,14 +67,16 @@ class _NotePageState extends State<NotePage> {
             Expanded(
               child: Padding(
                 padding: EdgeInsets.all(8.0),
-                child: CupertinoTextField(
-                  controller: _textController,
-                  placeholder: 'Start typing here...',
-                  maxLines: null,
-                  expands: true,
-                  textAlignVertical: TextAlignVertical.top,
-                  style: CupertinoTheme.of(context).textTheme.textStyle,
-                  decoration: BoxDecoration(border: null),
+                child: SingleChildScrollView(
+                  child: CupertinoTextField(
+                    controller: _textController,
+                    placeholder: 'Start typing here...',
+                    maxLines: null,
+                    expands: true,
+                    textAlignVertical: TextAlignVertical.top,
+                    style: CupertinoTheme.of(context).textTheme.textStyle,
+                    decoration: BoxDecoration(border: null),
+                  ),
                 ),
               ),
             ),
