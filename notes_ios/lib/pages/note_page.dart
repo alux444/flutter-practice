@@ -47,6 +47,10 @@ class _NotePageState extends State<NotePage> {
     });
   }
 
+  void _goBack() {
+    Navigator.of(context).pop(_note);
+  }
+
   void _undo() {
     setState(() {
       _note.undo();
@@ -74,7 +78,7 @@ class _NotePageState extends State<NotePage> {
       navigationBar: CupertinoNavigationBar(
         leading: CupertinoButton(
           child: Icon(CupertinoIcons.back),
-          onPressed: () => Navigator.of(context).pop(),
+          onPressed: _goBack,
         ),
         trailing: Row(
           mainAxisAlignment: MainAxisAlignment.end,
