@@ -43,8 +43,8 @@ class _NoteSelectionPageState extends State<NoteSelectionPage> {
         middle: Text(widget.folderTitle),
         trailing: CupertinoButton(
           padding: EdgeInsets.zero,
-          child: Icon(CupertinoIcons.add),
           onPressed: _createNewNote,
+          child: Icon(CupertinoIcons.add),
         ),
       ),
       child: _notes.isEmpty

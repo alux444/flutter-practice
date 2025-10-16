@@ -17,6 +17,10 @@ class _NotePageState extends State<NotePage> {
   late TextEditingController _textController;
   late Note _note;
   Timer? _debounceTimer;
+  Timer? _statusAnimationTimer;
+  Timer? _statusClearTimer;
+  // '' | 'Saving.' | 'Saving..' | 'Saving...' | 'Saved!'
+  String _saveStatus = '';
 
   @override
   void initState() {
@@ -31,6 +35,8 @@ class _NotePageState extends State<NotePage> {
     _textController.removeListener(_onTextChanged);
     _textController.dispose();
     _debounceTimer?.cancel();
+    _statusAnimationTimer?.cancel();
+    _statusClearTimer?.cancel();
     super.dispose();
   }
 
@@ -38,11 +44,46 @@ class _NotePageState extends State<NotePage> {
     return _note.toText();
   }
 
+  void _startSaveAnimation() {
+    _statusAnimationTimer?.cancel();
+    int dotCount = 1;
+
+    setState(() {
+      _saveStatus = 'Saving.';
+    });
+
+    _statusAnimationTimer = Timer.periodic(Duration(milliseconds: 200), (
+      timer,
+    ) {
+      if (!mounted) {
+        timer.cancel();
+        return;
+      }
+
+      dotCount = (dotCount % 3) + 1;
+      setState(() {
+        _saveStatus = 'Saving${'.' * dotCount}';
+      });
+    });
+  }
+
   void _onTextChanged() {
     _debounceTimer?.cancel();
+    _statusClearTimer?.cancel();
+    _startSaveAnimation();
+
     _debounceTimer = Timer(Duration(milliseconds: 500), () {
       setState(() {
         _note.fromText(_textController.text);
+        _saveStatus = 'Saved!';
+      });
+
+      Timer(Duration(seconds: 2), () {
+        if (mounted) {
+          setState(() {
+            _saveStatus = '';
+          });
+        }
       });
     });
   }
@@ -77,9 +118,18 @@ class _NotePageState extends State<NotePage> {
     return CupertinoPageScaffold(
       navigationBar: CupertinoNavigationBar(
         leading: CupertinoButton(
-          child: Icon(CupertinoIcons.back),
           onPressed: _goBack,
+          child: Icon(CupertinoIcons.back),
         ),
+        middle: _saveStatus.isNotEmpty
+            ? Text(
+                _saveStatus,
+                style: TextStyle(
+                  fontSize: 14,
+                  color: CupertinoColors.secondaryLabel,
+                ),
+              )
+            : null,
         trailing: Row(
           mainAxisAlignment: MainAxisAlignment.end,
           children: [
