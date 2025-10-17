@@ -68,17 +68,29 @@ class _NotePageState extends State<NotePage> {
   }
 
   void _onTextChanged() {
+    String newText = _textController.text;
+    String currentText = _note.toText();
+    if (newText == currentText) return;
+
     _debounceTimer?.cancel();
     _statusClearTimer?.cancel();
-    _startSaveAnimation();
+
+    if (_statusAnimationTimer == null ||
+        !_statusAnimationTimer!.isActive ||
+        _saveStatus == '' ||
+        _saveStatus == 'Saved!') {
+      _startSaveAnimation();
+    }
 
     _debounceTimer = Timer(Duration(milliseconds: 500), () {
+      _statusAnimationTimer?.cancel();
+
       setState(() {
         _note.fromText(_textController.text);
         _saveStatus = 'Saved!';
       });
 
-      Timer(Duration(seconds: 2), () {
+      _statusClearTimer = Timer(Duration(seconds: 3), () {
         if (mounted) {
           setState(() {
             _saveStatus = '';
@@ -121,18 +133,17 @@ class _NotePageState extends State<NotePage> {
           onPressed: _goBack,
           child: Icon(CupertinoIcons.back),
         ),
-        middle: _saveStatus.isNotEmpty
-            ? Text(
-                _saveStatus,
-                style: TextStyle(
-                  fontSize: 14,
-                  color: CupertinoColors.secondaryLabel,
-                ),
-              )
-            : null,
         trailing: Row(
           mainAxisAlignment: MainAxisAlignment.end,
           children: [
+            if (_saveStatus.isNotEmpty)
+              Text(
+                _saveStatus,
+                style: TextStyle(
+                  fontSize: 14,
+                  color: CupertinoColors.systemPurple,
+                ),
+              ),
             CupertinoButton(
               onPressed: _note.canUndo ? _undo : null,
               disabledColor: CupertinoColors.inactiveGray,
