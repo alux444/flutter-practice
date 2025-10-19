@@ -1,8 +1,8 @@
 import 'dart:async';
 
 import 'package:flutter/cupertino.dart';
-import 'package:flutter/services.dart';
 import 'package:notes_ios/data/note.dart';
+import 'package:notes_ios/widgets/rich_text_controller.dart';
 
 class NotePage extends StatefulWidget {
   const NotePage({super.key, this.note});
@@ -14,7 +14,7 @@ class NotePage extends StatefulWidget {
 }
 
 class _NotePageState extends State<NotePage> {
-  late TextEditingController _textController;
+  late RichTextController _textController;
   late Note _note;
   Timer? _debounceTimer;
   Timer? _statusAnimationTimer;
@@ -26,7 +26,7 @@ class _NotePageState extends State<NotePage> {
   void initState() {
     super.initState();
     _note = widget.note ?? Note();
-    _textController = TextEditingController(text: _getNoteText());
+    _textController = RichTextController(text: _getNoteText());
     _textController.addListener(_onTextChanged);
   }
 
@@ -125,6 +125,10 @@ class _NotePageState extends State<NotePage> {
     });
   }
 
+  void _toggleBold() {
+    _textController.toggleBold(_textController.selection);
+  }
+
   @override
   Widget build(BuildContext context) {
     return CupertinoPageScaffold(
@@ -144,6 +148,10 @@ class _NotePageState extends State<NotePage> {
                   color: CupertinoColors.systemPurple,
                 ),
               ),
+            CupertinoButton(
+              onPressed: _toggleBold,
+              child: Icon(CupertinoIcons.bold, size: 20),
+            ),
             CupertinoButton(
               onPressed: _note.canUndo ? _undo : null,
               disabledColor: CupertinoColors.inactiveGray,
