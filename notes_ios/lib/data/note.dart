@@ -23,6 +23,14 @@ class Note {
     spans = history.redo.removeLast();
   }
 
+  void fromText(String text) {
+    if (text.isEmpty) {
+      spans = [];
+      return;
+    }
+    spans = [NoteSpan(text: text)];
+  }
+
   String toText() => spans.map((span) => span.text ?? '').join();
 
   TextSpan toTextSpan() {
