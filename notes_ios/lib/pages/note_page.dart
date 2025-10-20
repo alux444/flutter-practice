@@ -26,7 +26,7 @@ class _NotePageState extends State<NotePage> {
   void initState() {
     super.initState();
     _note = widget.note ?? Note();
-    _textController = RichTextController(text: _getNoteText());
+    _textController = RichTextController(text: _getNoteText(), note: _note);
     _textController.addListener(_onTextChanged);
   }
 
@@ -86,7 +86,6 @@ class _NotePageState extends State<NotePage> {
       _statusAnimationTimer?.cancel();
 
       setState(() {
-        _note.fromText(_textController.text);
         _saveStatus = 'Saved!';
       });
 
@@ -107,7 +106,7 @@ class _NotePageState extends State<NotePage> {
   void _undo() {
     setState(() {
       _note.undo();
-      _textController.text = _note.toText();
+      _textController.setNote(_note);
       // moves cursor to end of text
       _textController.selection = TextSelection.collapsed(
         offset: _textController.text.length,
@@ -118,7 +117,7 @@ class _NotePageState extends State<NotePage> {
   void _redo() {
     setState(() {
       _note.redo();
-      _textController.text = _note.toText();
+      _textController.setNote(_note);
       _textController.selection = TextSelection.collapsed(
         offset: _textController.text.length,
       );

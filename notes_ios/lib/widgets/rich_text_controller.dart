@@ -1,10 +1,126 @@
 import 'package:flutter/cupertino.dart';
+import 'package:notes_ios/data/note.dart';
+import 'package:notes_ios/data/note_span.dart';
 
 class RichTextController extends TextEditingController {
-  final List<TextSpan> _spans = [];
   final List<TextRange> _boldRanges = [];
+  Note? _note;
+  String _previousText = '';
 
-  RichTextController({super.text});
+  RichTextController({super.text, Note? note}) {
+    _note = note;
+    _loadBoldRangesFromNote();
+    _previousText = text;
+    addListener(_onTextChanged);
+  }
+
+  @override
+  void dispose() {
+    removeListener(_onTextChanged);
+    super.dispose();
+  }
+
+  void _onTextChanged() {
+    final currentText = text;
+    final previousText = _previousText;
+    if (currentText == previousText) return;
+
+    int changeStart = 0;
+    while (changeStart < currentText.length &&
+        changeStart < previousText.length &&
+        currentText[changeStart] == previousText[changeStart]) {
+      changeStart++;
+    }
+
+    int changeEndCurrent = currentText.length;
+    int changeEndPrevious = previousText.length;
+    while (changeEndCurrent > changeStart &&
+        changeEndPrevious > changeStart &&
+        currentText[changeEndCurrent - 1] ==
+            previousText[changeEndPrevious - 1]) {
+      changeEndCurrent--;
+      changeEndPrevious--;
+    }
+
+    final lengthDiff =
+        (changeEndCurrent - changeStart) - (changeEndPrevious - changeStart);
+    _adjustBoldRanges(changeEndPrevious, lengthDiff);
+    _previousText = currentText;
+    _saveBoldRangesToNote();
+  }
+
+  void _adjustBoldRanges(int changePosition, int lengthDiff) {
+    for (int i = 0; i < _boldRanges.length; i++) {
+      final range = _boldRanges[i];
+      if (range.start >= changePosition) {
+        // range starts after change, shift both start end
+        _boldRanges[i] = TextRange(
+          start: range.start + lengthDiff,
+          end: range.end + lengthDiff,
+        );
+      } else if (range.end > changePosition) {
+        // range contains the change position so shift the end
+        _boldRanges[i] = TextRange(
+          start: range.start,
+          end: range.end + lengthDiff,
+        );
+      }
+    }
+    _boldRanges.removeWhere((range) => range.end <= range.start);
+  }
+
+  void setNote(Note note) {
+    _note = note;
+    _loadBoldRangesFromNote();
+    text = _note!.toText();
+  }
+
+  void _loadBoldRangesFromNote() {
+    if (_note == null) return;
+
+    _boldRanges.clear();
+    int currentPos = 0;
+
+    for (final span in _note!.spans) {
+      if (span.isBold) {
+        _boldRanges.add(
+          TextRange(start: currentPos, end: currentPos + span.text.length),
+        );
+      }
+      currentPos += span.text.length;
+    }
+  }
+
+  void _saveBoldRangesToNote() {
+    if (_note == null) return;
+
+    final newSpans = <NoteSpan>[];
+    int currentIndex = 0;
+    final sortedRanges = List<TextRange>.from(_boldRanges)
+      ..sort((a, b) => a.start.compareTo(b.start));
+
+    for (final range in sortedRanges) {
+      if (currentIndex < range.start) {
+        newSpans.add(
+          NoteSpan(
+            text: text.substring(currentIndex, range.start),
+            isBold: false,
+          ),
+        );
+      }
+
+      newSpans.add(
+        NoteSpan(text: text.substring(range.start, range.end), isBold: true),
+      );
+
+      currentIndex = range.end;
+    }
+
+    if (currentIndex < text.length) {
+      newSpans.add(NoteSpan(text: text.substring(currentIndex), isBold: false));
+    }
+    _note!.fromTextSpans(newSpans);
+  }
 
   void toggleBold(TextSelection selection) {
     if (!selection.isValid || selection.isCollapsed) return;
@@ -35,6 +151,7 @@ class RichTextController extends TextEditingController {
       ..clear()
       ..addAll(newRanges);
 
+    _saveBoldRangesToNote();
     notifyListeners();
   }
 
