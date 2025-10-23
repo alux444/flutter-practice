@@ -3,11 +3,19 @@ import 'package:form_app/data/user_model.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 
 class AuthService {
+  static final AuthService _instance = AuthService._internal();
+  factory AuthService() => _instance;
+  AuthService._internal();
+
   final FirebaseAuth _auth = FirebaseAuth.instance;
   final GoogleSignIn _googleSignIn = GoogleSignIn.instance;
+  bool _isInitialized = false;
 
   Future<void> initialize() async {
-    await _googleSignIn.initialize();
+    if (!_isInitialized) {
+      await _googleSignIn.initialize();
+      _isInitialized = true;
+    }
   }
 
   User? get currentUser => _auth.currentUser;
@@ -27,7 +35,7 @@ class AuthService {
 
   Future<UserModel?> signInWithGoogle() async {
     try {
-      final GoogleSignInAccount? googleUser = await _googleSignIn
+      final GoogleSignInAccount googleUser = await _googleSignIn
           .authenticate();
       if (googleUser == null) return null;
       final GoogleSignInAuthentication googleAuth = googleUser.authentication;

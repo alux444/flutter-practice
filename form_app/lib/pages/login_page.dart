@@ -13,6 +13,16 @@ class _LoginPageState extends State<LoginPage> {
   final AuthService _authService = AuthService();
   bool _isLoading = false;
 
+  @override
+  void initState() {
+    super.initState();
+    _initializeAuthService();
+  }
+
+  Future<void> _initializeAuthService() async {
+    await _authService.initialize();
+  }
+
   Future<void> _signInWithGoogle() async {
     setState(() {
       _isLoading = true;
