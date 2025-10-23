@@ -1,0 +1,39 @@
+{
+  "project_info": {
+    "project_number": "554716694215",
+    "project_id": "tracktrekker-cf743",
+    "storage_bucket": "tracktrekker-cf743.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:554716694215:android:4a8591723b5a1973bee0e2",
+        "android_client_info": {
+          "package_name": "com.example.form_app"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "554716694215-8ahsf7rd7egnm5nu5qjrs9u6cuig83h6.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCZxuo0UXhOCIHF0wSJOjszd8aEeXuug8k"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "554716694215-8ahsf7rd7egnm5nu5qjrs9u6cuig83h6.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
